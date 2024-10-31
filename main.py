@@ -119,7 +119,7 @@ if __name__ == '__main__':
     one_y = one_y_1
 
     dataset = EEGDataset(one_falx, one_y)
-    kfold = StratifiedKFold(n_splits=5, shuffle=True, random_state=seed)
+    kfold = StratifiedKFold(n_splits=2, shuffle=True, random_state=seed)
     fold_accuracies = []
 
     for train_idx, test_idx in kfold.split(one_falx, one_y.argmax(1)):
@@ -175,7 +175,7 @@ if __name__ == '__main__':
                 inputs = [batch_x[:, i].permute(0, 3, 1, 2).to(device, non_blocking=True) for i in range(6)]
                 labels = batch_y.argmax(dim=1).to(device, non_blocking=True)
 
-                with torch.cuda.amp.autocast():
+                with torch.amp.autocast('cuda'):
                     outputs = model(inputs)
                     _, predicted = torch.max(outputs.data, 1)
                     total += labels.size(0)
@@ -185,7 +185,7 @@ if __name__ == '__main__':
         fold_accuracies.append(accuracy)
         print(f"Fold Accuracy: {accuracy:.2f}%")
 
-    print(f"Subject {nb + 1} Mean Accuracy: {np.mean(fold_accuracies):.2f}%")
+    # print(f"Subject {nb + 1} Mean Accuracy: {np.mean(fold_accuracies):.2f}%")
     acc_list.append(np.mean(fold_accuracies))
     std_list.append(np.std(fold_accuracies))
     end = time.time()
