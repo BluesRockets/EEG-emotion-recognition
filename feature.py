@@ -4,36 +4,27 @@ import numpy as np
 from easydev.progressbar import consoleprint
 from scipy.signal import butter, lfilter
 from scipy.io import loadmat
-from sympy.printing.numpy import const
+
+data_directory = '/Users/marcus/Documents/MATLAB/SEED-IV/eeg_raw_data'  # Directory containing the EEG data files
+data_labels = [[1, 2, 3, 0, 2, 0, 0, 1, 0, 1, 2, 1, 1, 1, 2, 3, 2, 2, 3, 3, 0, 3, 0, 3],
+               [2, 1, 3, 0, 0, 2, 0, 2, 3, 3, 2, 3, 2, 0, 1, 1, 2, 1, 0, 3, 0, 1, 3, 1],
+               [1, 2, 2, 1, 3, 3, 3, 1, 1, 2, 1, 0, 2, 3, 3, 0, 2, 3, 0, 0, 2, 0, 1, 0]]
 
 
 # Function to extract differential entropy (DE) features from EEG data
-def extract_features(filepath, subject_name):
-    """
-    Extract differential entropy (DE) features from EEG data.
-
-    Args:
-        filepath (str): Path to the EEG data file.
-        subject_name (str): Name of the subject whose data is being processed.
-
-    Returns:
-        np.ndarray: Extracted DE features with shape (total_samples, 62, 5).
-        np.ndarray: Corresponding labels for each sample.
-    """
+def extract_features(filepath, subject_name, session_index):
     # Load data from .mat file
     eeg_data = loadmat(filepath)
     sampling_rate = 200  # Hz, EEG data is downsampled to 200Hz
 
     all_features = []  # List to store all features from trials
     all_labels = []  # List to store all labels from trials
-    labels = [1, 2, 3, 0, 2, 0, 0, 1, 0, 1, 2, 1, 1, 1, 2, 3, 2, 2, 3, 3, 0, 3, 0,
-              3]  # Predefined labels for each trial
 
     for trial_index in range(24):
         # Extract trial data for the given subject
         trial_data = eeg_data[f'{subject_name}_eeg{trial_index + 1}']
         num_segments = len(trial_data[0]) // 100  # Calculate the number of 0.5-second segments
-        trial_labels = [labels[trial_index]] * num_segments  # Create labels for each segment
+        trial_labels = [data_labels[session_index][trial_index]] * num_segments  # Create labels for each segment
 
         trial_features = []  # List to store features for the current trial
         for channel_index in range(62):
@@ -64,18 +55,6 @@ def extract_features(filepath, subject_name):
 
 # Function to design a Butterworth bandpass filter
 def butter_bandpass(lowcut, highcut, fs, order=3):
-    """
-    Design a Butterworth bandpass filter.
-
-    Args:
-        lowcut (float): Lower cutoff frequency.
-        highcut (float): Upper cutoff frequency.
-        fs (float): Sampling rate.
-        order (int): Filter order.
-
-    Returns:
-        tuple: Numerator (b) and denominator (a) polynomials of the IIR filter.
-    """
     nyquist = 0.5 * fs  # Calculate Nyquist frequency
     low = lowcut / nyquist  # Normalize lower cutoff frequency
     high = highcut / nyquist  # Normalize upper cutoff frequency
@@ -85,76 +64,55 @@ def butter_bandpass(lowcut, highcut, fs, order=3):
 
 # Function to apply a Butterworth bandpass filter to the data
 def butter_bandpass_filter(data, lowcut, highcut, fs, order=3):
-    """
-    Apply a Butterworth bandpass filter to the data.
-
-    Args:
-        data (np.ndarray): Input signal data.
-        lowcut (float): Lower cutoff frequency.
-        highcut (float): Upper cutoff frequency.
-        fs (float): Sampling rate.
-        order (int): Filter order.
-
-    Returns:
-        np.ndarray: Filtered signal.
-    """
     b, a = butter_bandpass(lowcut, highcut, fs, order=order)  # Get filter coefficients
     return lfilter(b, a, data)  # Apply filter to data
 
 
 # Function to compute Differential Entropy (DE) of a signal segment
 def compute_de(segment):
-    """
-    Compute Differential Entropy (DE) of a signal segment.
-
-    Args:
-        segment (np.ndarray): Signal segment.
-
-    Returns:
-        float: Differential entropy value.
-    """
     variance = np.var(segment, ddof=1)  # Calculate variance of the segment
     return 0.5 * math.log(2 * math.pi * math.e * variance)  # Calculate DE using the variance
 
 
-# Main script for extracting features from multiple subjects
-input_directory = '../SEED-IV/eeg_raw_data/1'  # Directory containing the EEG data files
-subject_files = [
-    ('1_20160518', 'cz'),
-    ('2_20150915', 'ha'),
-    ('3_20150919', 'hql'),
-    ('4_20151111', 'ldy'),
-    ('5_20160406', 'ly'),
-    ('6_20150507', 'mhw'),
-    ('7_20150715', 'mz'),
-    ('8_20151103', 'qyt'),
-    ('9_20151028', 'rx'),
-    ('10_20151014', 'tyc'),
-    ('11_20150916', 'whh'),
-    ('12_20150725', 'wll'),
-    ('13_20151115', 'wq'),
-    ('14_20151205', 'zjd'),
-    ('15_20150508', 'zjy'),
-]
+# extract file name and participant's name
+subject_files = []
+for session_dir in os.listdir(data_directory):
+    if not session_dir.startswith('.'):
+        files = []
+        child_files = os.listdir(os.path.join(data_directory, session_dir))
+        for child_file_name in child_files:
+            child_file_path = os.path.join(data_directory, session_dir, child_file_name)
+            if os.path.isfile(child_file_path):
+                eeg_data = loadmat(child_file_path)
+                keys = eeg_data.keys()
+                filtered_keys = [key for key in keys if isinstance(key, str) and not key.startswith('__')]
+                if len(filtered_keys) > 0:
+                    files.append((child_file_path, filtered_keys[0].split('_')[0]))
+        files = sorted(files)
+        subject_files.append(files)
 
 X_all = []  # List to store features from all subjects
 y_all = []  # List to store labels from all subjects
 
 # Loop through each subject file and extract features
-for subject_file, subject_name in subject_files:
-    print(f'Processing {subject_file}...')  # Print the name of the file being processed
-    features, labels = extract_features(os.path.join(input_directory, subject_file),
-                                        subject_name)  # Extract features and labels
-    X_all.append(features)  # Append extracted features to the list
-    y_all.append(labels)
+for subject_index in range(len(subject_files[0])):
+    subject_features = []
+    subject_labels = []
+    for session_index, session_files in enumerate(subject_files):
+        file_path, subject_name = session_files[subject_index]
+        print(f'Processing {file_path}...')
+        features, labels = extract_features(file_path, subject_name, session_index)
+        subject_features.append(features)
+        subject_labels.append(labels)
+    X_all.append(np.concatenate(subject_features, axis=0))
+    y_all.append(np.concatenate(subject_labels, axis=0))
 
 # Stack all features and labels into arrays
-X_all = np.vstack(X_all)  # Stack features vertically
-y_all = np.hstack(y_all)  # Stack labels horizontally
+X_all = np.vstack(X_all)
+y_all = np.hstack(y_all)
 
-# Save the extracted features and labels to .npy files
-np.save('./features/X_1D.npy', X_all)
-np.save('./features/y.npy', y_all)
+# np.save('./features/X_1D.npy', X_all)
+np.save('./features/labels.npy', y_all)
 
 # Reshape features to 8x9 spatial grid
 X_reshaped = np.zeros((len(y_all), 8, 9, 5))  # Initialize array to store reshaped features
