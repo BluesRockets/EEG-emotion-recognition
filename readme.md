@@ -1,6 +1,13 @@
 # EEG Emotion Recognition with CNN
 This project implements a Convolutional Neural Network (CNN) for emotion recognition based on EEG data. The following instructions will guide you through the setup and usage of the project.
 
+## Requirements
+- Python 3.x
+- Numpy
+- Scipy
+- PyTorch
+- sklearn
+
 ## Usage
 ### 1. Modify the data_directory Variable:
 In feature.py, set the data_directory variable to point to your local folder containing the raw EEG data files.
