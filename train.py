@@ -9,7 +9,6 @@ import time
 subjects = 15
 segment_length = 6
 
-# Define PyTorch Dataset
 class EEGDataset(Dataset):
     def __init__(self, data, labels):
         self.data = data
@@ -19,8 +18,8 @@ class EEGDataset(Dataset):
         return len(self.labels)
 
     def __getitem__(self, idx):
-        x = self.data[idx]  # Shape: (6, 8, 9, 4)
-        y = self.labels[idx]  # Shape: (3,)
+        x = self.data[idx]
+        y = self.labels[idx]
         return torch.tensor(x, dtype=torch.float32), torch.tensor(y, dtype=torch.float32)
 
 
@@ -29,7 +28,6 @@ class ConvNet(nn.Module):
     def __init__(self, input_dim):
         super(ConvNet, self).__init__()
         # Changed input_dim[2] to input_dim[0] to get the correct number of channels
-        # The input to the convolutional layer should have 4 channels, not 8.
         self.conv1 = nn.Conv2d(input_dim[2], 64, kernel_size=5, padding=2)
         self.conv2 = nn.Conv2d(64, 128, kernel_size=4, padding=1)
         self.conv3 = nn.Conv2d(128, 256, kernel_size=4, padding=1)
@@ -133,67 +131,7 @@ if __name__ == '__main__':
             test_loader = DataLoader(Subset(dataset, test_idx), batch_size=batch_size, shuffle=False, num_workers=4,
                                      pin_memory=True)
 
-            # Initialize model, loss function, and optimizer
-            model = EEGNet((img_rows, img_cols, 4)).to(device)
-            criterion = nn.CrossEntropyLoss()
-            optimizer = optim.Adam(model.parameters())
-
-            # Mixed precision training
-            scaler = torch.amp.GradScaler()
-
-            # Training Loop
-            model.train()
-            for epoch in range(100):
-                epoch_start = time.time()
-                running_loss = 0.0
-                for batch_x, batch_y in train_loader:
-                    # Change the permutation order to (0, 2, 3, 1) to match the expected channel dimension
-                    inputs = [batch_x[:, i].permute(0, 3, 1, 2).to(device, non_blocking=True) for i in range(6)]
-                    labels = batch_y.argmax(dim=1).to(device, non_blocking=True)
-
-                    optimizer.zero_grad()
-
-                    # Mixed precision training
-                    with torch.amp.autocast("cuda"):
-                        outputs = model(inputs)
-                        loss = criterion(outputs, labels)
-
-                    scaler.scale(loss).backward()
-                    scaler.step(optimizer)
-                    scaler.update()
-
-                    running_loss += loss.item()
-
-                epoch_end = time.time()
-                # Print the average loss for the epoch and the time taken
-                print(
-                    f"Epoch [{epoch + 1}/100], Loss: {running_loss / len(train_loader):.4f}, Time: {epoch_end - epoch_start:.2f} seconds")
-
-            # Evaluation
-            model.eval()
-            correct = 0
-            total = 0
-            with torch.no_grad():
-                for batch_x, batch_y in test_loader:
-                    # Change the permutation order here as well
-                    inputs = [batch_x[:, i].permute(0, 3, 1, 2).to(device, non_blocking=True) for i in range(6)]
-                    labels = batch_y.argmax(dim=1).to(device, non_blocking=True)
-
-                    with torch.amp.autocast('cuda'):
-                        outputs = model(inputs)
-                        _, predicted = torch.max(outputs.data, 1)
-                        total += labels.size(0)
-                        correct += (predicted == labels).sum().item()
-
-            accuracy = 100 * correct / total
-            fold_accuracies.append(accuracy)
-            print(f"Fold Accuracy: {accuracy:.2f}%")
-
-        print(f"Subject {nb + 1} Mean Accuracy: {np.mean(fold_accuracies):.2f}%")
-        acc_list.append(np.mean(fold_accuracies))
-        std_list.append(np.std(fold_accuracies))
-        end = time.time()
-        print(f"Execution Time: {end - start:.2f} seconds")
+            #train process
 
     # Final Results
     print(f'Acc_all: {acc_list}')
