@@ -5,7 +5,7 @@ from easydev.progressbar import consoleprint
 from scipy.signal import butter, lfilter
 from scipy.io import loadmat
 
-data_directory = '/Users/marcus/Documents/MATLAB/SEED-IV/eeg_raw_data'  # Directory containing the EEG data files
+data_directory = '..\\SEED-IV\\eeg_raw_data'  # Directory containing the EEG data files
 data_labels = [[1, 2, 3, 0, 2, 0, 0, 1, 0, 1, 2, 1, 1, 1, 2, 3, 2, 2, 3, 3, 0, 3, 0, 3],
                [2, 1, 3, 0, 0, 2, 0, 2, 3, 3, 2, 3, 2, 0, 1, 1, 2, 1, 0, 3, 0, 1, 3, 1],
                [1, 2, 2, 1, 3, 3, 3, 1, 1, 2, 1, 0, 2, 3, 3, 0, 2, 3, 0, 0, 2, 0, 1, 0]]
@@ -81,13 +81,14 @@ for session_dir in os.listdir(data_directory):
         files = []
         child_files = os.listdir(os.path.join(data_directory, session_dir))
         for child_file_name in child_files:
-            child_file_path = os.path.join(data_directory, session_dir, child_file_name)
-            if os.path.isfile(child_file_path):
-                eeg_data = loadmat(child_file_path)
-                keys = eeg_data.keys()
-                filtered_keys = [key for key in keys if isinstance(key, str) and not key.startswith('__')]
-                if len(filtered_keys) > 0:
-                    files.append((child_file_path, filtered_keys[0].split('_')[0]))
+            if not child_file_name.startswith('.'):
+                child_file_path = os.path.join(data_directory, session_dir, child_file_name)
+                if os.path.isfile(child_file_path):
+                    eeg_data = loadmat(child_file_path)
+                    keys = eeg_data.keys()
+                    filtered_keys = [key for key in keys if isinstance(key, str) and not key.startswith('__')]
+                    if len(filtered_keys) > 0:
+                        files.append((child_file_path, filtered_keys[0].split('_')[0]))
         files = sorted(files)
         subject_files.append(files)
 
