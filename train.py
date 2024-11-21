@@ -2,7 +2,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from torch.utils.data import Dataset, DataLoader, Subset
+from torch.utils.data import Dataset, DataLoader, Subset, random_split
 from sklearn.model_selection import StratifiedKFold
 import time
 
@@ -105,7 +105,7 @@ if __name__ == '__main__':
     y = np.load("./features/segmented_y_89.npy")
 
     num_segments = falx.shape[1]
-    one_y_1 = np.array([y[:num_segments]] * 3).reshape((-1,))
+    one_y_1 = y
     one_y_1 = one_y_1.astype(int)  # Convert to integers
     one_y_1 = np.eye(num_classes)[one_y_1]  # Convert to one-hot encoded format
 
@@ -114,87 +114,90 @@ if __name__ == '__main__':
     std_list = []
 
     # Process each subject independently
-    for nb in range(15):
-        start = time.time()
-        one_falx_1 = falx[nb * 3:nb * 3 + 3]
-        one_falx_1 = one_falx_1.reshape((-1, segment_length, img_rows, img_cols, 5))
-        one_falx = one_falx_1[:, :, :, :, 1:5]  # Only use four frequency bands
-        one_y = one_y_1
+    # for nb in range(15):
+    start = time.time()
+    one_falx_1 = falx
+    one_falx_1 = one_falx_1.reshape((-1, segment_length, img_rows, img_cols, 5))
+    one_falx = one_falx_1[:, :, :, :, 1:5]  # Only use four frequency bands
+    one_y = one_y_1
 
-        dataset = EEGDataset(one_falx, one_y)
-        kfold = StratifiedKFold(n_splits=5, shuffle=True, random_state=seed)
-        fold_accuracies = []
+    dataset = EEGDataset(one_falx, one_y)
+    # kfold = StratifiedKFold(n_splits=5, shuffle=True, random_state=seed)
+    fold_accuracies = []
 
-        for train_idx, test_idx in kfold.split(one_falx, one_y.argmax(1)):
-            # Create DataLoader for training and testing
-            train_loader = DataLoader(Subset(dataset, train_idx), batch_size=batch_size, shuffle=True, num_workers=4,
-                                      pin_memory=True)
-            test_loader = DataLoader(Subset(dataset, test_idx), batch_size=batch_size, shuffle=False, num_workers=4,
-                                     pin_memory=True)
+    test_size = int(len(dataset) * 0.3)
+    train_dataset, test_dataset = random_split(dataset, [len(dataset) - test_size, test_size])
 
-            model = EEGNet((img_rows, img_cols, 4)).to(device)
-            criterion = nn.CrossEntropyLoss()
-            optimizer = optim.Adam(model.parameters())
+    # for train_idx, test_idx in kfold.split(one_falx, one_y.argmax(1)):
+    # Create DataLoader for training and testing
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=4,
+                              pin_memory=True)
+    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=4,
+                             pin_memory=True)
+
+    model = EEGNet((img_rows, img_cols, 4)).to(device)
+    criterion = nn.CrossEntropyLoss()
+    optimizer = optim.Adam(model.parameters())
+
+    # Mixed precision training
+    scaler = torch.amp.GradScaler()
+
+    # Training Loop
+    model.train()
+    for epoch in range(100):
+        epoch_start = time.time()
+        running_loss = 0.0
+        for batch_x, batch_y in train_loader:
+            # Change the permutation order to (0, 2, 3, 1) to match the expected channel dimension
+            inputs = [batch_x[:, i].permute(0, 3, 1, 2).to(device, non_blocking=True) for i in range(6)]
+            labels = batch_y.argmax(dim=1).to(device, non_blocking=True)
+
+            optimizer.zero_grad()
 
             # Mixed precision training
-            scaler = torch.amp.GradScaler()
+            with torch.amp.autocast("cuda"):
+                outputs = model(inputs)
+                loss = criterion(outputs, labels)
 
-            # Training Loop
-            model.train()
-            for epoch in range(100):
-                epoch_start = time.time()
-                running_loss = 0.0
-                for batch_x, batch_y in train_loader:
-                    # Change the permutation order to (0, 2, 3, 1) to match the expected channel dimension
-                    inputs = [batch_x[:, i].permute(0, 3, 1, 2).to(device, non_blocking=True) for i in range(6)]
-                    labels = batch_y.argmax(dim=1).to(device, non_blocking=True)
+            scaler.scale(loss).backward()
+            scaler.step(optimizer)
+            scaler.update()
 
-                    optimizer.zero_grad()
+            running_loss += loss.item()
 
-                    # Mixed precision training
-                    with torch.amp.autocast("cuda"):
-                        outputs = model(inputs)
-                        loss = criterion(outputs, labels)
+        epoch_end = time.time()
+        # Print the average loss for the epoch and the time taken
+        print(
+            f"Epoch [{epoch + 1}/100], Loss: {running_loss / len(train_loader):.4f}, Time: {epoch_end - epoch_start:.2f} seconds")
 
-                    scaler.scale(loss).backward()
-                    scaler.step(optimizer)
-                    scaler.update()
+    # Evaluation
+    model.eval()
+    correct = 0
+    total = 0
+    with torch.no_grad():
+        for batch_x, batch_y in test_loader:
+            # Change the permutation order here as well
+            inputs = [batch_x[:, i].permute(0, 3, 1, 2).to(device, non_blocking=True) for i in range(6)]
+            labels = batch_y.argmax(dim=1).to(device, non_blocking=True)
 
-                    running_loss += loss.item()
+            with torch.amp.autocast('cuda'):
+                outputs = model(inputs)
+                _, predicted = torch.max(outputs.data, 1)
+                total += labels.size(0)
+                correct += (predicted == labels).sum().item()
 
-                epoch_end = time.time()
-                # Print the average loss for the epoch and the time taken
-                print(
-                    f"Epoch [{epoch + 1}/100], Loss: {running_loss / len(train_loader):.4f}, Time: {epoch_end - epoch_start:.2f} seconds")
+    accuracy = 100 * correct / total
+    fold_accuracies.append(accuracy)
+    print(f"Fold Accuracy: {accuracy:.2f}%")
 
-            # Evaluation
-            model.eval()
-            correct = 0
-            total = 0
-            with torch.no_grad():
-                for batch_x, batch_y in test_loader:
-                    # Change the permutation order here as well
-                    inputs = [batch_x[:, i].permute(0, 3, 1, 2).to(device, non_blocking=True) for i in range(6)]
-                    labels = batch_y.argmax(dim=1).to(device, non_blocking=True)
-
-                    with torch.amp.autocast('cuda'):
-                        outputs = model(inputs)
-                        _, predicted = torch.max(outputs.data, 1)
-                        total += labels.size(0)
-                        correct += (predicted == labels).sum().item()
-
-            accuracy = 100 * correct / total
-            fold_accuracies.append(accuracy)
-            print(f"Fold Accuracy: {accuracy:.2f}%")
-
-        print(f"Subject {nb + 1} Mean Accuracy: {np.mean(fold_accuracies):.2f}%")
-        acc_list.append(np.mean(fold_accuracies))
-        std_list.append(np.std(fold_accuracies))
-        end = time.time()
-        print(f"Execution Time: {end - start:.2f} seconds")
-
-# Final Results
-print(f'Acc_all: {acc_list}')
-print(f'Std_all: {std_list}')
-print(f"Acc_mean: {np.mean(acc_list)}")
-print(f"Std_all: {np.std(std_list)}")
+# print(f"Subject {nb + 1} Mean Accuracy: {np.mean(fold_accuracies):.2f}%")
+# acc_list.append(np.mean(fold_accuracies))
+# std_list.append(np.std(fold_accuracies))
+# end = time.time()
+# print(f"Execution Time: {end - start:.2f} seconds")
+#
+# # Final Results
+# print(f'Acc_all: {acc_list}')
+# print(f'Std_all: {std_list}')
+# print(f"Acc_mean: {np.mean(acc_list)}")
+# print(f"Std_all: {np.std(std_list)}")
