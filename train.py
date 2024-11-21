@@ -128,7 +128,7 @@ if __name__ == '__main__':
 
     # Training Loop
     model.train()
-    for epoch in range(100):
+    for epoch in range(50):
         epoch_start = time.time()
         running_loss = 0.0
         for batch_x, batch_y in train_loader:

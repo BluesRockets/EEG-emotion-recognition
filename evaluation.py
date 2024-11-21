@@ -2,7 +2,7 @@
 import numpy as np
 import torch
 from torch.utils.data import DataLoader
-from train import EEGDataset
+from train import EEGDataset, EEGNet
 
 if __name__ == '__main__':
 
@@ -24,8 +24,8 @@ if __name__ == '__main__':
     print(f"Using device: {device}")
 
     # Data loading
-    falx = np.load("./features/1_segmented_x_89.npy")
-    y = np.load("./features/1_segmented_y_89.npy")
+    falx = np.load("./features/0_segmented_x_89.npy")
+    y = np.load("./features/0_segmented_y_89.npy")
 
     num_segments = falx.shape[1]
     one_y_1 = y.astype(int)  # Convert to integers
@@ -39,8 +39,9 @@ if __name__ == '__main__':
     test_loader = DataLoader(dataset, batch_size=batch_size, shuffle=False, num_workers=4,
                              pin_memory=True)
 
+    model = EEGNet((img_rows, img_cols, 4)).to(device)
     #load modal from file
-    model = torch.load('./results/model.pt')
+    model.load_state_dict(torch.load('./results/model.pt'))
     model.eval()
     correct = 0
     total = 0
