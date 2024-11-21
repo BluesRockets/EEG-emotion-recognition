@@ -108,30 +108,26 @@ for subject_index in range(len(subject_files[0])):
     X_all.append(np.concatenate(subject_features, axis=0))
     y_all.append(np.concatenate(subject_labels, axis=0))
 
-# Stack all features and labels into arrays
-X_all = np.vstack(X_all)
-y_all = np.hstack(y_all)
+for i in range(len(X_all)):
+    np.save('./features/'+ str(i) + '_labels.npy', y_all[i])
 
-# np.save('./features/X_1D.npy', X_all)
-np.save('./features/labels.npy', y_all)
+    # Reshape features to 8x9 spatial grid
+    X_reshaped = np.zeros((len(X_all[i]), 8, 9, 5))  # Initialize array to store reshaped features
 
-# Reshape features to 8x9 spatial grid
-X_reshaped = np.zeros((len(y_all), 8, 9, 5))  # Initialize array to store reshaped features
+    # Map 62-channel features to an 8x9 grid according to electrode layout
+    channel_mapping = {
+        (0, 2): 3,  # Mapping channel 3 to grid position (0, 2)
+        (0, 3): 0, (0, 4): 1, (0, 5): 2,  # Mapping channels 0, 1, 2 to grid positions (0, 3), (0, 4), (0, 5)
+        (0, 6): 4,  # Mapping channel 4 to grid position (0, 6)
+        **{(i + 1, j): 5 + i * 9 + j for i in range(5) for j in range(9)},  # Mapping middle rows (1-5) to channels 5-49
+        (6, 1): 50, (6, 2): 51, (6, 3): 52, (6, 4): 53, (6, 5): 54, (6, 6): 55, (6, 7): 56,
+        # Mapping channels 50-56 to row 6
+        (7, 2): 57, (7, 3): 58, (7, 4): 59, (7, 5): 60, (7, 6): 61,  # Mapping channels 57-61 to row 7
+    }
 
-# Map 62-channel features to an 8x9 grid according to electrode layout
-channel_mapping = {
-    (0, 2): 3,  # Mapping channel 3 to grid position (0, 2)
-    (0, 3): 0, (0, 4): 1, (0, 5): 2,  # Mapping channels 0, 1, 2 to grid positions (0, 3), (0, 4), (0, 5)
-    (0, 6): 4,  # Mapping channel 4 to grid position (0, 6)
-    **{(i + 1, j): 5 + i * 9 + j for i in range(5) for j in range(9)},  # Mapping middle rows (1-5) to channels 5-49
-    (6, 1): 50, (6, 2): 51, (6, 3): 52, (6, 4): 53, (6, 5): 54, (6, 6): 55, (6, 7): 56,
-    # Mapping channels 50-56 to row 6
-    (7, 2): 57, (7, 3): 58, (7, 4): 59, (7, 5): 60, (7, 6): 61,  # Mapping channels 57-61 to row 7
-}
+    # Assign values to the reshaped feature array based on the channel mapping
+    for (row, col), channel in channel_mapping.items():
+        X_reshaped[:, row, col, :] = X_all[i][:, channel, :]  # Assign channel data to corresponding grid position
 
-# Assign values to the reshaped feature array based on the channel mapping
-for (row, col), channel in channel_mapping.items():
-    X_reshaped[:, row, col, :] = X_all[:, channel, :]  # Assign channel data to corresponding grid position
-
-# Save the reshaped features to a .npy file
-np.save('./features/X89.npy', X_reshaped)
+    # Save the reshaped features to a .npy file
+    np.save('./features/'+ str(i) + '_X89.npy', X_reshaped)
