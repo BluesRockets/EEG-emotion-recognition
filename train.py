@@ -108,10 +108,6 @@ if __name__ == '__main__':
     one_y_1 = y.astype(int)  # Convert to integers
     one_y_1 = np.eye(num_classes)[one_y_1]  # Convert to one-hot encoded format
 
-    # Cross-Validation
-    acc_list = []
-    std_list = []
-
     # Process each subject independently
     start = time.time()
     one_falx_1 = falx.reshape((-1, segment_length, img_rows, img_cols, 5))
@@ -132,7 +128,7 @@ if __name__ == '__main__':
 
     # Training Loop
     model.train()
-    for epoch in range(1):
+    for epoch in range(100):
         epoch_start = time.time()
         running_loss = 0.0
         for batch_x, batch_y in train_loader:

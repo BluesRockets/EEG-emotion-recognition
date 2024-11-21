@@ -39,6 +39,7 @@ if __name__ == '__main__':
     test_loader = DataLoader(dataset, batch_size=batch_size, shuffle=False, num_workers=4,
                              pin_memory=True)
 
+    #load modal from file
     model = torch.load('./results/model.pt')
     model.eval()
     correct = 0

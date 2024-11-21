@@ -96,17 +96,16 @@ X_all = []  # List to store features from all subjects
 y_all = []  # List to store labels from all subjects
 
 # Loop through each subject file and extract features
-for subject_index in range(len(subject_files[0])):
-    subject_features = []
-    subject_labels = []
-    for session_index, session_files in enumerate(subject_files):
-        file_path, subject_name = session_files[subject_index]
+for session_index in range(len(subject_files)):
+    session_features = []
+    session_labels = []
+    for file_path, subject_name in subject_files[session_index]:
         print(f'Processing {file_path}...')
         features, labels = extract_features(file_path, subject_name, session_index)
-        subject_features.append(features)
-        subject_labels.append(labels)
-    X_all.append(np.concatenate(subject_features, axis=0))
-    y_all.append(np.concatenate(subject_labels, axis=0))
+        session_features.append(features)
+        session_labels.append(labels)
+    X_all.append(np.concatenate(session_features, axis=0))
+    y_all.append(np.concatenate(session_labels, axis=0))
 
 for i in range(len(X_all)):
     np.save('./features/'+ str(i) + '_labels.npy', y_all[i])

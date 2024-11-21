@@ -24,5 +24,5 @@ segmented_x_89.npy: Segmented EEG data.
 segmented_y_89.npy: Corresponding labels for the segmented data.
 ### 5. Train the Model:
 Execute train.py to start training the CNN model. After training, the model parameters will be saved in the model_states folder.
-### 6. Evaluate the Model(TO DO):
+### 6. Evaluate the Model:
 Finally, run evaluation.py to test the model's prediction accuracy.

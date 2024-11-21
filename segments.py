@@ -12,7 +12,7 @@ for i in range(len(X89_all_sessions)):
     # Define the image dimensions
     img_rows, img_cols, num_chan = 8, 9, 5
     falx = X89
-    labels = labels[:int(labels.shape[0] / 15)]
+    labels = labels[:int(labels.shape[0] / subjects)]
 
     # Reshape the data to (45 subjects, X89.shape[0] / subjects samples, img_rows, img_cols, num_chan)
     falx = falx.reshape((subjects, int(X89.shape[0] / subjects), img_rows, img_cols, num_chan))
@@ -21,8 +21,8 @@ for i in range(len(X89_all_sessions)):
     segment_length = 6
 
     # Define the number of segments based on segment length
+    # int(int(X89.shape[0] / subjects) / segment_length)
     num_segments = int(int(X89.shape[0] / subjects) / segment_length)
-
     # Iterate through different time intervals and assign corresponding labels
     # The labels are defined based on specific ranges within each subject's data
     label_intervals = []
@@ -50,14 +50,14 @@ for i in range(len(X89_all_sessions)):
                 if falx[subject_idx, sample_idx:sample_idx + segment_length].shape[0] > 0:
                     new_x[subject_idx, segment_idx] = falx[subject_idx, sample_idx:sample_idx + segment_length]
                     new_y = np.append(new_y, label)
-                else:
-                    print(1)
                 sample_idx += segment_length
                 segment_idx += 1
+
+        new_x = new_x[:, :segment_idx, :, :, :, :]
 
         # Print the number of segments for each subject
         print(f'Subject {subject_idx}: {segment_idx} segments')
 
     # Save the segmented data and labels to .npy files
-    np.save('./features/'+ str(i) +'segmented_x_89.npy', new_x)
-    np.save('./features/'+ str(i) +'segmented_y_89.npy', new_y)
+    np.save('./features/'+ str(i) +'_segmented_x_89.npy', new_x)
+    np.save('./features/'+ str(i) +'_segmented_y_89.npy', new_y)
