@@ -3,11 +3,12 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import Dataset, DataLoader, Subset, random_split
-from sklearn.model_selection import StratifiedKFold
+from sklearn.model_selection import StratifiedKFold, train_test_split
 import time
 
 subjects = 15
 segment_length = 6
+total_epoch = 100
 
 
 class EEGDataset(Dataset):
@@ -113,7 +114,11 @@ if __name__ == '__main__':
     one_falx_1 = falx.reshape((-1, segment_length, img_rows, img_cols, 5))
     one_falx = one_falx_1[:, :, :, :, 1:5]  # Only use four frequency bands
 
-    dataset = EEGDataset(one_falx, one_y_1)
+    X_train, X_test, y_train, y_test = train_test_split(one_falx, one_y_1, test_size=0.3)
+
+    dataset = EEGDataset(X_train, y_train)
+    np.save('./features/x_test.npy', X_test)
+    np.save('./features/y_test.npy', y_test)
 
     # Create DataLoader for training and testing
     train_loader = DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=4,
@@ -128,7 +133,7 @@ if __name__ == '__main__':
 
     # Training Loop
     model.train()
-    for epoch in range(50):
+    for epoch in range(total_epoch):
         epoch_start = time.time()
         running_loss = 0.0
         for batch_x, batch_y in train_loader:
@@ -152,6 +157,8 @@ if __name__ == '__main__':
         epoch_end = time.time()
         # Print the average loss for the epoch and the time taken
         print(
-            f"Epoch [{epoch + 1}/100], Loss: {running_loss / len(train_loader):.4f}, Time: {epoch_end - epoch_start:.2f} seconds")
+            f"Epoch [{epoch + 1}/{total_epoch}], Loss: {running_loss / len(train_loader):.4f}, Time: {epoch_end - epoch_start:.2f} seconds")
+        if running_loss / len(train_loader) < 0.005: #adopt early stop
+            break
 
     torch.save(model.state_dict(), './results/model.pt')

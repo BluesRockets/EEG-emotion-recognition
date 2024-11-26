@@ -61,3 +61,44 @@ for i in range(len(X89_all_sessions)):
     # Save the segmented data and labels to .npy files
     np.save('./features/'+ str(i) +'_segmented_x_89.npy', new_x)
     np.save('./features/'+ str(i) +'_segmented_y_89.npy', new_y)
+
+
+ #version2
+
+    # new_y = np.zeros((subjects, num_segments))
+    #
+    # # Loop through each subject to segment the data
+    # for subject_idx in range(subjects):
+    #     segment_idx = 0
+    #     sample_idx = 0
+    #
+    #     # Segment the data based on defined intervals and labels
+    #     for start_idx, end_idx, label in label_intervals:
+    #         sample_idx = start_idx
+    #         while sample_idx + segment_length <= end_idx:
+    #             # Extract segment of length `segment_length` from the data
+    #             if falx[subject_idx, sample_idx:sample_idx + segment_length].shape[0] > 0:
+    #                 new_x[subject_idx, segment_idx] = falx[subject_idx, sample_idx:sample_idx + segment_length]
+    #                 new_y[subject_idx, segment_idx] = label
+    #             sample_idx += segment_length
+    #             segment_idx += 1
+    #
+    #     new_x = new_x[:, :segment_idx, :, :, :, :]
+    #     new_y = new_y[:, :segment_idx]
+    #
+    #     # Print the number of segments for each subject
+    #     print(f'Subject {subject_idx}: {segment_idx} segments')
+    #
+    # #split first 16 trails and last 8 trails as train set and test set
+    # split_index = int(new_x.shape[1] * 2 / 3)
+    # train_set, test_set = np.split(new_x, [split_index], axis=1)
+    # train_set_label, test_set_label = np.split(new_y, [split_index], axis=1)
+    # train_set_label = train_set_label.reshape(-1)
+    # test_set_label = test_set_label.reshape(-1)
+    #
+    #
+    # # Save the segmented data and labels to .npy files
+    # np.save('./features/'+ str(i) +'_segmented_train.npy', train_set)
+    # np.save('./features/' + str(i) + '_segmented_test.npy', test_set)
+    # np.save('./features/'+ str(i) +'_segmented_label_train.npy', train_set_label)
+    # np.save('./features/' + str(i) + '_segmented_label_test.npy', test_set_label)

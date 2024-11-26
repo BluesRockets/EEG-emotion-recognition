@@ -1,6 +1,7 @@
 # Evaluation
 import numpy as np
 import torch
+from sklearn.model_selection import train_test_split
 from torch.utils.data import DataLoader
 from train import EEGDataset, EEGNet
 
@@ -23,18 +24,10 @@ if __name__ == '__main__':
         device = torch.device("cpu")
     print(f"Using device: {device}")
 
-    # Data loading
-    falx = np.load("./features/0_segmented_x_89.npy")
-    y = np.load("./features/0_segmented_y_89.npy")
+    X_test = np.load("./features/x_test.npy")
+    y_test = np.load("./features/y_test.npy")
 
-    num_segments = falx.shape[1]
-    one_y_1 = y.astype(int)  # Convert to integers
-    one_y_1 = np.eye(num_classes)[one_y_1]  # Convert to one-hot encoded format
-
-    one_falx_1 = falx.reshape((-1, segment_length, img_rows, img_cols, 5))
-    one_falx = one_falx_1[:, :, :, :, 1:5]  # Only use four frequency bands
-
-    dataset = EEGDataset(one_falx, one_y_1)
+    dataset = EEGDataset(X_test, y_test)
 
     test_loader = DataLoader(dataset, batch_size=batch_size, shuffle=False, num_workers=4,
                              pin_memory=True)
