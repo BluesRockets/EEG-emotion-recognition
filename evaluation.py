@@ -34,7 +34,7 @@ if __name__ == '__main__':
 
     model = EEGNet((img_rows, img_cols, 4)).to(device)
     #load modal from file
-    model.load_state_dict(torch.load('./results/model.pt'))
+    model.load_state_dict(torch.load('model_states/model.pt'))
     model.eval()
     correct = 0
     total = 0

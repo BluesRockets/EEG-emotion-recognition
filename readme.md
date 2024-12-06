@@ -8,6 +8,20 @@ This project implements a Convolutional Neural Network (CNN) for emotion recogni
 - PyTorch
 - sklearn
 
+## Structure
+```
+├── EDA/                 # Directory for Exploratory Data Analysis scripts  
+├── feature/             # Directory for storing preprocessed data to read by the modal
+├── model_states/        # Directory for saving trained modal's parameters
+│   └── model.pt         # File for saving the CNN-LSTM model's weights
+├── results/             # Directory for saving training process output in different times
+├── evaluation.py        # Script for evaluating model performance on test data
+├── README.md            # Project documentation file
+├── feature.py           # Script containing feature extraction methods
+├── segments.py          # Additional training and experiment-related scripts
+└── train.py             # Script defining the general training loop
+```
+
 ## Usage
 ### 1. Modify the data_directory Variable:
 In feature.py, set the data_directory variable to point to your local folder containing the raw EEG data files.
