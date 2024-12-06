@@ -40,3 +40,20 @@ segmented_y_89.npy: Corresponding labels for the segmented data.
 Execute train.py to start training the CNN model. After training, the model parameters will be saved in the result folder as name of model.pt.
 ### 6. Evaluate the Model:
 Finally, run evaluation.py to test the model's prediction accuracy.
+
+## Model Architecture
+Convolutional Neural Network (CNN)
+Defined in train.py by the Class ConvNet, this Class defined all the layers and all parameters of CNN network.
+
+Long Short-Term Memory (LSTM)
+Defined in train.py by the Class EEGNet, this Class defined all the layers and all parameters of LSTM.
+
+## Training the Model
+Training process is in the file train.py, which read preprocessed data and extracted features from folder features/.
+Then saving the all parameters of the trained model in to the file model_states/model.pt, in order to evaluation the model many times without training again.
+
+## Evaluation
+The evaluation steps are embedded in the evaluation.py script, which reports:
+- The value of loss function changes
+- Validation accuracy
+- Total time consumption
